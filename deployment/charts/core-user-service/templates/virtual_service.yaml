@@ -1,0 +1,28 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ template "name" . }}
+  labels:
+    app: {{ .Chart.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ template "name" . }}
+spec:
+  hosts:
+  {{- toYaml .Values.ingress.hosts | nindent 2 }}
+  gateways:
+  - default/core-gateway
+  http:
+  - match:    
+    - uri:
+        prefix: {{ .Values.ingress.uriPrefix }}
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        port:
+          number: {{ .Values.service.port }}
+        host: {{ template "name" . }}
+    # retries:
+    #   attempts: 3
+    #   perTryTimeout: 2s
+    #   retryOn: gateway-error,connect-failure,refused-stream

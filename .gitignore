@@ -1,0 +1,13 @@
+node_modules
+.nyc_output
+tmp
+coverage
+docs
+.env
+.DS_Store
+.idea
+service-account-dev.json
+buckets.config.json
+.scannerwork
+test-report.xml
+.vscode/settings.json

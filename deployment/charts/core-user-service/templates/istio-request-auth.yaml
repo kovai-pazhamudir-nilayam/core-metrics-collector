@@ -1,0 +1,22 @@
+{{- if .Values.jwt_policy.enabled -}}
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  annotations:
+    meta.helm.sh/release-name: {{ template "name" . }}
+  labels:
+    app: {{ .Chart.Name }}-{{ .Values.image.tag }}
+    app.kubernetes.io/managed-by: Helm
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ template "name" . }}
+  name: {{ template "name" . }}
+spec:
+  jwtRules:
+  - forwardOriginalToken: true
+    issuer: https://ebomart.us.auth0.com/
+    jwksUri: https://ebomart.us.auth0.com/.well-known/jwks.json
+  selector:
+    matchLabels:
+      release: {{ template "name" . }}
+---
+{{- end -}}

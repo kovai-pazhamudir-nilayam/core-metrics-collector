@@ -1,0 +1,91 @@
+name: FEATURE-BRANCH - Build and Test
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - dev-*
+      - staging-*
+      - beta-*
+
+env:
+  IMAGE: core-user-service
+
+jobs:
+  node-build-deploy:
+    runs-on: core-app
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: OPA Docker
+        uses: ebomart/opa-docker@v2.0
+        with:
+          file: Dockerfile
+
+      - name: Dockerfile Lint
+        uses: hadolint/hadolint-action@v1.5.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+      - name: Get the deployment file
+        run: helm template $IMAGE deployment/charts/$IMAGE -f deployment/charts/$IMAGE/values.yaml --output-dir opa
+
+      - name: OPA Kubernetes
+        uses: ebomart/opa-kubernetes@v2.1.16
+        with:
+          file: opa/core-user-service/templates/deployment.yaml
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          # cache: 'npm'
+          # cache-dependency-path: '**/package-lock.json'
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@ebomart"
+
+      - name: Remove .npmrc
+        run: rm -rf .npmrc
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Restore .npmrc
+        run: git checkout .npmrc
+
+      - name: Run post install scripts
+        run: npm rebuild && npm run prepare --if-present
+
+      - name: Code Linting
+        run: npm run lint
+
+      - name: Dependency Checks
+        run: npm audit
+
+      - name: Unit Test
+        run: npm run test:cov
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        with:
+          projectBaseDir: .
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5 # force to fail step after specific time
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

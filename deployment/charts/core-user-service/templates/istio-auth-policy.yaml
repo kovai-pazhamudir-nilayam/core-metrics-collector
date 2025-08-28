@@ -1,0 +1,44 @@
+{{- if .Values.jwt_policy.enabled -}}
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  annotations:
+    meta.helm.sh/release-name: {{ template "name" . }}
+  labels:
+    app: {{ .Chart.Name }}-{{ .Values.image.tag }}
+    app.kubernetes.io/managed-by: Helm
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ template "name" . }}
+  name: {{ template "name" . }}
+spec:
+  rules:
+  - to:
+    - operation:
+        paths:
+        - /metrics
+        - /health
+        - /documentation
+        - /documentation/*
+  - from:
+    - source:
+        principals:
+        - '*'
+    to:
+    - operation:
+        methods:
+        - POST
+        - GET
+        - DELETE
+        - PATCH
+        - PUT
+        paths:
+        - /v1/*
+    when:
+    - key: request.auth.claims[aud]
+      values:
+      - {{ .Values.jwt_policy.audience }}
+  selector:
+    matchLabels:
+      release: {{ template "name" . }}
+---
+{{- end -}}
