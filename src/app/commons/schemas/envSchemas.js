@@ -26,6 +26,31 @@ exports.envSchema = {
     },
     CLOUD_BUCKET_NAME: {
       type: "string"
+    },
+
+    GCP_ZONE: { type: "string" },
+    GCP_PROJECT_ID: { type: "string" },
+
+    DEPLOYMENT_TYPE: {
+      type: "string"
+    },
+    UDP_PORT: {
+      type: "number"
+    },
+    METRICS_STATUS_EVENT_TOPIC: {
+      type: "string"
+    },
+    OUTLET_ID: {
+      type: "string"
+    },
+    BROADCAST_ADDRESS: {
+      type: "string"
+    },
+    CORE_METRICS_SERVICE: {
+      type: "string"
+    },
+    BFF_AUTHN_BFF_URL: {
+      type: "string"
     }
   }
 };

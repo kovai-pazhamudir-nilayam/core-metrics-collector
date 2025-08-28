@@ -1,4 +1,5 @@
 require("dotenv").config();
+const _ = require("lodash");
 const fastifyEnv = require("@fastify/env");
 const fastifyHealthcheck = require("fastify-healthcheck");
 const envSchema = require("env-schema");
@@ -7,18 +8,13 @@ const swaggerUi = require("@fastify/swagger-ui");
 const fastifyMetrics = require("fastify-metrics");
 
 const { envSchema: schema } = require("./app/commons/schemas/envSchemas");
-const { knexConfig } = require("../config/index");
-const routes = require("./app/users/routes");
+const ConsumePubsubEvents = require("./app/events");
+const applicationMetricStatusRoutes = require("./app/app-metrics/routes");
 
 // PLUGINS
 const ajv = require("./app/plugins/ajv");
-const memCache = require("./app/plugins/mem-cache");
-const knex = require("./app/plugins/knex");
-const readGcpSecret = require("./app/plugins/readGcpSecret");
 const httpClient = require("./app/plugins/httpClient");
-const pubsub = require("./app/plugins/pubsub");
-const cloudBucket = require("./app/plugins/cloudBucket");
-const artifactPlugin = require("./app/plugins/artifact-file-upload");
+const pubsubPlugin = require("./app/plugins/pubsub");
 
 const {
   extractLogTrace,
@@ -56,17 +52,14 @@ async function create() {
   // PLUGINS
   await fastify.register(ajv);
   await fastify.register(httpClient);
-  await fastify.register(knex, knexConfig);
-  await fastify.register(memCache);
-  await fastify.register(readGcpSecret);
+  await fastify.register(pubsubPlugin);
   await fastify.register(swagger, SWAGGER_CONFIGS);
   await fastify.register(swaggerUi, SWAGGER_UI_CONFIGS);
-  await fastify.register(pubsub);
-  await fastify.register(cloudBucket);
-  await fastify.register(artifactPlugin);
 
   // ROUTES
-  await fastify.register(routes, { prefix: "/v1" });
+  await fastify.register(applicationMetricStatusRoutes, {
+    prefix: "/v1/metrics-collector"
+  });
 
   // Fastify-metrics
   if (process.env.NODE_ENV !== "test") {
@@ -91,6 +84,7 @@ async function start() {
       }
     }
   };
+  if (_.isEmpty(fastify.PubSubPull)) ConsumePubsubEvents(fastify);
   const config = envSchema({ schema: defaultSchema, dotenv: true });
   // Run the server!
   fastify.listen({ port: config.PORT, host: config.HOST }, (err, address) => {

@@ -1,3 +1,5 @@
+const moment = require("moment");
+
 exports.connectionCheck = db => db.raw("select 1+1 as result");
 
 exports.getAuditInfo = entity => {
@@ -30,3 +32,5 @@ exports.logQuery = ({ logger, query, context, logTrace }) => {
     bindings: SQLQueryObj.bindings
   });
 };
+
+exports.getCurrentTimestamp = () => moment().toISOString();
